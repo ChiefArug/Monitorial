@@ -25,6 +25,9 @@ public class MonitorHelpers {
 
 
     public static Monitor getBestGLFWMonitorCode(Supplier<Monitor> defaultPrimary, ObjectCollection<Monitor> monitors) {
+        if (monitors.size() == 1)
+            return defaultPrimary.get(); // silently return if there is only one monitor. we don't need to do anything.
+
         if (FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL) && !MonitorialStartupConfig.INSTANCE.forceMove().shouldAttemptMove()) {
             LOGGER.warn("earlyWindowControl in config/fml.toml is enabled and forceMove in config/monitorial-startup.json is disabled so Monitorial will not function!");
             return defaultPrimary.get(); // in theory running the code after this is fine, but the logging messages will be confusing
@@ -33,17 +36,11 @@ public class MonitorHelpers {
         Optional<MonitorData> configured = MonitorialStartupConfig.INSTANCE.defaultMonitor();
         if (configured.isEmpty()) {
             LOGGER.info("Monitorial is not configured, using default behaviour (primary monitor)");
-            LOGGER.info("Monitors found, for configuring: ");
+            LOGGER.info("To configured set one of these as \"defaultMonitor\" in config/monitorial-startup.json: ");
             logMonitors();
             return defaultPrimary.get();
         }
         MonitorData preferred = configured.get();
-
-
-        if (monitors == null) {
-            LOGGER.error("Failed to get monitors from GLFW. Something is seriously broken...");
-            return defaultPrimary.get();
-        }
 
 
         int len = monitors.size();
@@ -56,7 +53,7 @@ public class MonitorHelpers {
                 y = monitor.getY();
             String name = GLFW.glfwGetMonitorName(monitor.getMonitor());
 
-            LOGGER.debug("Monitorial found a monitor named '{}' at x: {}, y: {}", name, x, y);
+            LOGGER.trace("Monitorial found a monitor named '{}' at x: {}, y: {}", name, x, y);
 
             NamedDistancedMonitor distanced = new NamedDistancedMonitor(getDistanceSqrd(preferred.x(), x, preferred.y(), y), monitor, name);
             distancedMonitors.add(distanced);
@@ -65,11 +62,12 @@ public class MonitorHelpers {
 
         }
         if (matches.size() == 1) {
+            LOGGER.debug("Monitorial found exactly one monitor that matched the configured name '{}'", preferred.name());
             NamedDistancedMonitor monitor = matches.getFirst();
             return monitor.monitor;
         }
         if (matches.isEmpty()) {
-            LOGGER.warn("Monitorial couldn't find any monitors that match the configured name of {}. Searching by distance instead.", preferred.name());
+            LOGGER.debug("Monitorial couldn't find any monitors that match the configured name of {}. Searching by position instead.", preferred.name());
             matches = distancedMonitors;
         }
 
@@ -94,7 +92,9 @@ public class MonitorHelpers {
             String name = GLFW.glfwGetMonitorName(monitor);
             GLFW.glfwGetMonitorPos(monitor, x, y);
 
-            LOGGER.info("'{}' at x: {}, y: {}", name, x[0], y[0]);
+            LOGGER.info("""
+                    {"name": {}, "x": {}, "y": {}},"
+                    """, name, x[0], y[0]);
         }
     }
 
@@ -102,14 +102,15 @@ public class MonitorHelpers {
         int x = monitor.getX() + windowWidth / 2;
         int y = monitor.getY() + windowHeight / 2;
 
-        LOGGER.info("Attempting to move window to position x: {}. y: {} on monitor {} (located at x: {}, y: {})", x, y, GLFW.glfwGetMonitorName(monitor.getMonitor()), monitor.getX(), monitor.getY());
+        String monitorName = GLFW.glfwGetMonitorName(monitor.getMonitor());
+        LOGGER.info("Attempting to force move window to position x: {}. y: {} on monitor {} (located at x: {}, y: {})", x, y, monitorName, monitor.getX(), monitor.getY());
         GLFW.glfwSetWindowPos(window, x, y);
         try (MemoryStack memorystack = MemoryStack.stackPush()) {
             PointerBuffer pointerbuffer = memorystack.mallocPointer(1);
             int error = glfwGetError(pointerbuffer);
             switch (error) {
-                case GLFW_NO_ERROR -> LOGGER.info("Monitorial successfully moved the game window after NeoFoge released control!");
-                case GLFW_FEATURE_UNAVAILABLE -> LOGGER.error("Monitorial failed to move the window, your window manager does not support moving windows!");
+                case GLFW_NO_ERROR -> LOGGER.info("Monitorial successfully moved the game window to monitor '{}' after NeoForge released control!", monitorName);
+                case GLFW_FEATURE_UNAVAILABLE -> LOGGER.error("Monitorial failed to move the window, your window manager does not support moving windows! Disable forceMove in config/monitorial-startup.json to stop trying and hide this message.");
                 default -> {
                     long pDescription = pointerbuffer.get();
                     String description = pDescription == 0L ? "" : MemoryUtil.memUTF8(pDescription);

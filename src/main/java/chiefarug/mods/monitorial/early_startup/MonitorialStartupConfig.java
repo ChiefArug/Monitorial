@@ -23,6 +23,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static chiefarug.mods.monitorial.MonitorialConstants.MODID;
+import static chiefarug.mods.monitorial.early_startup.MonitorialStartupConfig.Anchor.Snap.*;
 
 public record MonitorialStartupConfig(Optional<MonitorData> defaultMonitor, Anchor anchorPosition, ForceMoveState forceMove) {
     public static final Path location = FMLPaths.CONFIGDIR.get().resolve(MODID + "-startup.json");
@@ -36,27 +37,47 @@ public record MonitorialStartupConfig(Optional<MonitorData> defaultMonitor, Anch
 
 
     public enum Anchor {
-        TOP_LEFT, TOP_MIDDLE, TOP_RIGHT, MIDDLE_LEFT, MIDDLE, MIDDLE_RIGHT, BOTTOM_LEFT, BOTTOM_MIDDLE, BOTTOM_RIGHT, DEFAULT;
+        TOP_LEFT(MIN, MIN),         TOP_MIDDLE(MIN, MIDDLE),    TOP_RIGHT(MIN, MAX),
+        MIDDLE_LEFT(MIDDLE, MIN),   CENTRE(MIDDLE, MIDDLE),     MIDDLE_RIGHT(MIDDLE, MAX),
+        BOTTOM_LEFT(MAX, MIN),      BOTTOM_MIDDLE(MAX, MIDDLE), BOTTOM_RIGHT(MAX, MAX),
+        DEFAULT(null, null);
+        enum Snap {
+            MIN { int get(int max) {
+                return 0;
+            }},
+            MIDDLE { int get(int max) {
+                return max / 2;
+            }},
+            MAX { int get(int max) {
+                return max;
+            }};
+            abstract int get(int max);
+        }
+        private final Snap x, y;
+        Anchor(Snap x, Snap y) {
+            this.x = x;
+            this.y = y;
+        }
+        public int getAbsX(int minX, int maxX) {
+            return minX + x.get(maxX - minX);
+        }
+        public int getAbsY(int minY, int maxY) {
+            return minY + y.get(maxY - minY);
+        }
+
         public static final Codec<Anchor> CODEC = Codec.STRING.xmap(s -> Anchor.valueOf(s.toUpperCase(Locale.ROOT)), Enum::name);
     }
 
     public enum ForceMoveState {
-        NEVER {
-            @Override
-            public boolean shouldAttemptMove() {
-                return false;
-            }
-        }, ELS_ONLY {
-            @Override
-            public boolean shouldAttemptMove() {
-                return FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL);
-            }
-        }, ALWAYS {
-            @Override
-            public boolean shouldAttemptMove() {
-                return true;
-            }
-        };
+        NEVER { public boolean shouldAttemptMove() {
+            return false;
+        }},
+        ELS_ONLY { public boolean shouldAttemptMove() {
+            return FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL);
+        }},
+        ALWAYS { public boolean shouldAttemptMove() {
+            return true;
+        }};
         public static final Codec<ForceMoveState> CODEC = Codec.STRING.xmap(s -> ForceMoveState.valueOf(s.toUpperCase(Locale.ROOT)), Enum::name);
         public abstract boolean shouldAttemptMove();
     }
@@ -72,7 +93,7 @@ public record MonitorialStartupConfig(Optional<MonitorData> defaultMonitor, Anch
             return CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(Files.readString(location, StandardCharsets.UTF_8)).getAsJsonObject())
                     .resultOrPartial(error -> LGGR.error("Failed to parse {} config from {}! Overwriting with default. Error message: {}", MODID, location, error))
                     .orElseGet(MonitorialStartupConfig::new);
-        } catch (NoSuchFileException ignored) { // the file was deleted or never made in the first place, silently generated a new one.
+        } catch (NoSuchFileException ignored) { // the file was deleted or never made in the first place, silently generate a new one.
         } catch (IOException e) {
             LGGR.error("Failed to load {} config file from {}! Overwriting with default. Error message: {}", MODID, location, e);
         } catch (JsonSyntaxException e) {
