@@ -2,6 +2,7 @@
   "package": "chiefarug.mods.monitorial.mixin",
   "client": [
     "WindowMixin",
-    "ScreenManagerAccessor"
+    "ScreenManagerAccessor",
+    "ScreenAccessor"
   ]
 }

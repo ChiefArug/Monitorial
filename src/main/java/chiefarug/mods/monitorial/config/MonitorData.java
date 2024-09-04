@@ -1,4 +1,4 @@
-package chiefarug.mods.monitorial.early_startup;
+package chiefarug.mods.monitorial.config;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

@@ -1,6 +1,11 @@
 package chiefarug.mods.monitorial.early_startup;
 
+import chiefarug.mods.monitorial.MonitorialShared;
+import chiefarug.mods.monitorial.config.MonitorData;
+import chiefarug.mods.monitorial.config.MonitorialStartupConfig;
+import chiefarug.mods.monitorial.mixin.ScreenManagerAccessor;
 import com.mojang.blaze3d.platform.Monitor;
+import com.mojang.blaze3d.platform.ScreenManager;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.ObjectCollection;
 import net.neoforged.fml.loading.FMLConfig;
@@ -16,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static chiefarug.mods.monitorial.config.ForceMoveState.NEVER;
 import static org.lwjgl.glfw.GLFW.GLFW_FEATURE_UNAVAILABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_NO_ERROR;
 import static org.lwjgl.glfw.GLFW.glfwGetError;
@@ -25,15 +31,17 @@ public class MonitorHelpers {
 
 
     public static Monitor getBestGLFWMonitorCode(Supplier<Monitor> defaultPrimary, ObjectCollection<Monitor> monitors) {
-        if (monitors.size() == 1)
+        if (monitors.size() == 1) {
+            MonitorialShared.hasMultipleMonitors = false;
             return defaultPrimary.get(); // silently return if there is only one monitor. we don't need to do anything.
+        }
 
-        if (FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL) && !MonitorialStartupConfig.INSTANCE.forceMove().shouldAttemptMove()) {
-            LOGGER.warn("earlyWindowControl in config/fml.toml is enabled and forceMove in config/monitorial-startup.json is disabled so Monitorial will not function!");
+        if (FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL) && MonitorialStartupConfig.getInstance().forceMove() == NEVER) {
+            LOGGER.warn("earlyWindowControl in config/fml.toml is enabled and forceMove in config/monitorial-startup.json is set to NEVER so Monitorial has been effectively disabled!");
             return defaultPrimary.get(); // in theory running the code after this is fine, but the logging messages will be confusing
         }
 
-        Optional<MonitorData> configured = MonitorialStartupConfig.INSTANCE.defaultMonitor();
+        Optional<MonitorData> configured = MonitorialStartupConfig.getInstance().defaultMonitor();
         if (configured.isEmpty()) {
             LOGGER.info("Monitorial is not configured, using default behaviour (primary monitor)");
             LOGGER.info("To configured set one of these as \"defaultMonitor\" in config/monitorial-startup.json: ");
@@ -99,7 +107,9 @@ public class MonitorHelpers {
     }
 
     public static void forceMoveToMonitor(Monitor monitor, long window, int windowHeight, int windowWidth) {
-        int x = monitor.getX() + windowWidth / 2;
+        if (!MonitorialStartupConfig.getInstance().forceMove().shouldAttemptMove())  return;
+
+        int x = monitor.getX() + windowWidth / 2; //TODO: fix this maths being slightly wrong compared to vanilla
         int y = monitor.getY() + windowHeight / 2;
 
         String monitorName = GLFW.glfwGetMonitorName(monitor.getMonitor());
@@ -118,5 +128,9 @@ public class MonitorHelpers {
                 }
             }
         }
+    }
+
+    public static boolean hasMultipleMonitors(ScreenManager manager) {
+        return ((ScreenManagerAccessor) manager).getMonitors().size() > 1;
     }
 }

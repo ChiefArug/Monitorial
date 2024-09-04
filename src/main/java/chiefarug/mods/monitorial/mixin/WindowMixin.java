@@ -1,7 +1,6 @@
 package chiefarug.mods.monitorial.mixin;
 
 import chiefarug.mods.monitorial.early_startup.MonitorHelpers;
-import chiefarug.mods.monitorial.early_startup.MonitorialStartupConfig;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -30,8 +29,8 @@ public class WindowMixin {
                     target = "Lcom/mojang/blaze3d/platform/ScreenManager;getMonitor(J)Lcom/mojang/blaze3d/platform/Monitor;"
             )
     )
-    public Monitor monitorial$wrapGetWindow(ScreenManager instance, long _unused, Operation<Monitor> original) {
-        return MonitorHelpers.getBestGLFWMonitorCode(original::call, ((ScreenManagerAccessor) instance).getMonitors().values());
+    public Monitor monitorial$wrapGetWindow(ScreenManager instance, long monitorId, Operation<Monitor> original) {
+        return MonitorHelpers.getBestGLFWMonitorCode(() -> original.call(instance, monitorId), ((ScreenManagerAccessor) instance).getMonitors().values());
     }
 
     @Inject(
@@ -39,8 +38,6 @@ public class WindowMixin {
             at = @At("TAIL")
     )
     public void monitorial$attemptForceMoveIfEnabled(WindowEventHandler eventHandler, ScreenManager screenManager, DisplayData displayData, String preferredFullscreenVideoMode, String title, CallbackInfo ci, @Local Monitor monitor) {
-        if (MonitorialStartupConfig.INSTANCE.forceMove().shouldAttemptMove()) {
-            MonitorHelpers.forceMoveToMonitor(monitor, window, windowedHeight, windowedWidth);
-        }
+        MonitorHelpers.forceMoveToMonitor(monitor, window, windowedHeight, windowedWidth);
     }
 }
