@@ -68,9 +68,9 @@ public final class MonitorialStartupConfig {
 
 
     // default constructor, for use when the config was not found or failed to load.
-    private MonitorialStartupConfig() {
-        this(true, true, MonitorData.from(Helpers.getCurrentMonitor()), ForceMoveState.ALWAYS, new Position(0, 0), new Position(-1, -1));
-        this.save();
+    private MonitorialStartupConfig(boolean isGlobal) {
+        this(true, true, Optional.empty(), ForceMoveState.ALWAYS, new Position(0, 0), new Position(-1, -1));
+        this.save(isGlobal);
     }
 
     public static boolean isUsingGlobalConfig() {
@@ -94,18 +94,18 @@ public final class MonitorialStartupConfig {
         try {
             return CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(Files.readString(location, StandardCharsets.UTF_8)).getAsJsonObject())
                     .resultOrPartial(error -> LGGR.error("Failed to parse {} config from {}! Overwriting with default. Error message: {}", MODID, location, error))
-                    .orElseGet(MonitorialStartupConfig::new);
+                    .orElseGet(() -> new MonitorialStartupConfig(isGlobal));
         } catch (NoSuchFileException ignored) { // the file was deleted or never made in the first place, silently generate a new one.
         } catch (IOException e) {
             LGGR.error("Failed to load {} config file from {}! Overwriting with default. Error message: {}", MODID, location, e);
         } catch (JsonSyntaxException e) {
             LGGR.error("Failed to parse {} config file from {}! Overwriting with default. Error message: {}", MODID, location, e);
         }
-        return new MonitorialStartupConfig();
+        return new MonitorialStartupConfig(isGlobal);
     }
 
-    void save() {
-        Path location = getLocation(isGlobal());
+    void save(boolean isGlobal) {
+        Path location = getLocation(isGlobal);
         File folder = location.toFile().getParentFile();
         if (!folder.exists() && !folder.mkdirs()) {
             LGGR.error("Failed to write {} config to {}! Couldn't create one or more folders to put the file in!", MODID, location);
@@ -195,6 +195,6 @@ public final class MonitorialStartupConfig {
         defaultMonitor(MonitorData.from(Helpers.getCurrentMonitor(window)));
         windowSize(new Position(window.getWidth(), window.getHeight()));
         position(new Position(window.getX(), window.getY()));
-        save();
+        save(isGlobal());
     }
 }

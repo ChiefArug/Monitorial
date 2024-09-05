@@ -151,7 +151,7 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
         this.layout.addToFooter(configNotActiveText = new StringWidget(400, 20,
                 CommonComponents.EMPTY, font
         ), layout -> layout.paddingTop(7).alignVerticallyTop());
-        this.layout.addToFooter(stealConfiguration = Button.builder(Component.translatable("options.monitorial.set_current_size_and_position"), this::stealConfiguration)
+        this.layout.addToFooter(stealConfiguration = Button.builder(Component.translatable("options.monitorial.set_current_size_and_position"), b -> stealConfiguration())
                         .size(110, 20)
                         .build(DisablableButton::new),
                 layout -> layout.alignHorizontallyCenter().paddingRight(120).alignVerticallyMiddle()
@@ -168,6 +168,8 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
         super.init();
         this.manualWidgets = List.of(defaultMonitor, xPos, yPos, xSize, ySize, stealConfiguration);
         updateWidgetsActiveState(getCurrentlyEditedConfig().automaticMode());
+        if (automaticMode.getValue())
+            stealConfiguration();
     }
 
     private void updateSliders(Optional<MonitorData> monitorData) {
@@ -229,7 +231,8 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
 
     @SuppressWarnings("DataFlowIssue") // list is always set when buttons exist, and this is only called from buttons
     private void updateCurrentlyEditedConfig(CycleButton<Boolean> _b, Boolean editingGlobal) {
-        getCurrentlyEditedConfig().save();
+        MonitorialStartupConfig config = editingGlobal ? MonitorialStartupConfig.GLOBAL.get() : MonitorialStartupConfig.LOCAL;
+        config.save(editingGlobal);
         // clear the list of updatable options, then add them back. the easiest way to update all the values.
         // we don't need to change any 'which config are we editing' things because everything that checks that refers back to this button's value
         this.list.children().removeIf((ContainerObjectSelectionList.Entry<?> item) -> item.children().stream().noneMatch(b -> b == currentlyEditing));
@@ -280,7 +283,7 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
 
     private void applyChangesToWindow(Button b) {
         MonitorialStartupConfig config = getCurrentlyEditedConfig();
-        config.save();
+        config.save(isEditingGlobal());
 
         Monitor monitor = config.defaultMonitor()
                 .map(d -> Helpers.getMonitor(d.id()))
@@ -326,22 +329,24 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
 
     public void onResize() {
         if (automaticMode.getValue()) {
-            Monitor monitor = Helpers.getCurrentMonitor();
-            setDefaultMonitor(monitor);
-            setSize(monitor.getCurrentMode().getWidth(), monitor.getCurrentMode().getHeight());
+            stealConfiguration();
+//            Monitor monitor = Helpers.getCurrentMonitor();
+//            setDefaultMonitor(monitor);
+//            setSize(monitor.getCurrentMode().getWidth(), monitor.getCurrentMode().getHeight());
         }
     }
 
     public void onMove() {
         if (automaticMode.getValue()) {
-            Window window = Minecraft.getInstance().getWindow();
-            Monitor monitor = Helpers.getCurrentMonitor();
-            setDefaultMonitor(monitor);
-            setPosition(window.getX() - monitor.getX(), window.getY() - monitor.getY());
+            stealConfiguration();
+//            Window window = Minecraft.getInstance().getWindow();
+//            Monitor monitor = Helpers.getCurrentMonitor();
+//            setDefaultMonitor(monitor);
+//            setPosition(window.getX() - monitor.getX(), window.getY() - monitor.getY());
         }
     }
 
-    private void stealConfiguration(Button button) {
+    private void stealConfiguration() {
         Window window = Minecraft.getInstance().getWindow();
         Monitor monitor = Helpers.getCurrentMonitor();
         setDefaultMonitor(monitor);
@@ -372,7 +377,7 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
 
     @Override
     public void removed() {
-        getCurrentlyEditedConfig().save();
+        getCurrentlyEditedConfig().save(isEditingGlobal());
     }
 
     private static class DisablableButton extends Button implements UpdatableTooltip$AlsoCycleButtonAccessor {
