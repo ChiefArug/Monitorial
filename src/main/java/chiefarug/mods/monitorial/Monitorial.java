@@ -7,7 +7,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
-import static chiefarug.mods.monitorial.early_startup.SharedConstants.MODID;
+import static chiefarug.mods.monitorial.early_startup.SharedData.MODID;
 
 @Mod(value = MODID, dist = Dist.CLIENT)
 public class Monitorial {

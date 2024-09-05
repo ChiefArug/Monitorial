@@ -1,10 +1,12 @@
 package chiefarug.mods.monitorial.config;
 
+import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.google.common.base.Suppliers;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonWriter;
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
@@ -25,9 +27,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static chiefarug.mods.monitorial.early_startup.SharedConstants.MODID;
+import static chiefarug.mods.monitorial.early_startup.SharedData.MODID;
 
-// TODO: initialize this off thread so that we don't block the main thread with two file read/writes?
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class MonitorialStartupConfig {
     private static final String localFilename = MODID + "-startup.json";
@@ -43,7 +44,7 @@ public final class MonitorialStartupConfig {
             MonitorData.CODEC.optionalFieldOf("defaultMonitor").forGetter(MonitorialStartupConfig::defaultMonitor),
             ForceMoveState.CODEC.fieldOf("forceMove").forGetter(MonitorialStartupConfig::forceMove),
             Position.CODEC.fieldOf("positionOffset").forGetter(MonitorialStartupConfig::position),
-            Position.CODEC.optionalFieldOf("windowSize").forGetter(MonitorialStartupConfig::windowSize)
+            Position.CODEC.fieldOf("windowSize").forGetter(MonitorialStartupConfig::windowSize)
     ).apply(instance, MonitorialStartupConfig::new));
     private static final Logger LGGR = LogUtils.getLogger();
     static final MonitorialStartupConfig LOCAL = load(false);
@@ -54,9 +55,9 @@ public final class MonitorialStartupConfig {
     private Optional<MonitorData> defaultMonitor;
     private ForceMoveState forceMove;
     private Position position;
-    private Optional<Position> windowSize;
+    private Position windowSize;
 
-    private MonitorialStartupConfig(boolean useGlobalConfig, boolean automaticMode, Optional<MonitorData> defaultMonitor, ForceMoveState forceMove, Position position, Optional<Position> windowSize) {
+    private MonitorialStartupConfig(boolean useGlobalConfig, boolean automaticMode, Optional<MonitorData> defaultMonitor, ForceMoveState forceMove, Position position, Position windowSize) {
         this.useGlobalConfig = useGlobalConfig;
         this.automaticMode = automaticMode;
         this.defaultMonitor = defaultMonitor;
@@ -68,7 +69,7 @@ public final class MonitorialStartupConfig {
 
     // default constructor, for use when the config was not found or failed to load.
     private MonitorialStartupConfig() {
-        this(true, true, Optional.empty(), ForceMoveState.ELS_ONLY, new Position(0, 0), Optional.empty());
+        this(true, true, MonitorData.from(Helpers.getCurrentMonitor()), ForceMoveState.ALWAYS, new Position(0, 0), new Position(-1, -1));
         this.save();
     }
 
@@ -149,7 +150,7 @@ public final class MonitorialStartupConfig {
 
     public Position position() {return position;}
 
-    public Optional<Position> windowSize() {return windowSize;}
+    public Position windowSize() {return windowSize;}
 
     void useGlobalConfig(boolean newValue) {useGlobalConfig = newValue;}
 
@@ -161,7 +162,7 @@ public final class MonitorialStartupConfig {
 
     void position(Position newValue) {position = newValue;}
 
-    void windowSize(Optional<Position> newValue) {windowSize = newValue;}
+    void windowSize(Position newValue) {windowSize = newValue;}
 
     @Override
     public boolean equals(Object obj) {
@@ -190,4 +191,10 @@ public final class MonitorialStartupConfig {
                 "forceMove=" + forceMove + ']';
     }
 
+    public void onWindowClose(Window window) {
+        defaultMonitor(MonitorData.from(Helpers.getCurrentMonitor(window)));
+        windowSize(new Position(window.getWidth(), window.getHeight()));
+        position(new Position(window.getX(), window.getY()));
+        save();
+    }
 }

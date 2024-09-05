@@ -1,18 +1,15 @@
 package chiefarug.mods.monitorial.config;
 
-import chiefarug.mods.monitorial.mixin.ScreenManagerAccessor;
-import chiefarug.mods.monitorial.mixin.WindowAccessor;
+import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
-
-import static chiefarug.mods.monitorial.early_startup.Helpers.getDistanceSqrd;
+import java.util.Optional;
+import java.util.function.LongSupplier;
 
 public final class MonitorData {
     public static final Codec<MonitorData> CODEC = RecordCodecBuilder.create(instance ->
@@ -24,15 +21,15 @@ public final class MonitorData {
     private final String name;
     private final int x;
     private final int y;
-    private final long id;
+    private final LongSupplier id;
 
     public MonitorData(String name, int x, int y) {
         this.name = name;
         this.x = x;
         this.y = y;
-        this.id = getMonitors().stream()
+        this.id = () -> Helpers.getMonitors().values().stream()
                 .filter(monitor -> this.name.equals(GLFW.glfwGetMonitorName(monitor.getMonitor())))
-                .min(Comparator.comparingInt(m1 -> getDistanceSqrd(m1.getX(), x, m1.getY(), y)))
+                .min(Comparator.comparingInt(m1 -> this.getDistanceSqrdTo(m1.getX(), m1.getY())))
                 .map(Monitor::getMonitor)
                 .orElse(0L);
     }
@@ -41,7 +38,15 @@ public final class MonitorData {
         this.name = name;
         this.x = x;
         this.y = y;
-        this.id = id;
+        this.id = () -> id;
+    }
+
+    public static Optional<MonitorData> from(Monitor mon) {
+        return Optional.of(new MonitorData(GLFW.glfwGetMonitorName(mon.getMonitor()), mon.getX(), mon.getY(), mon.getMonitor()));
+    }
+
+    public int getDistanceSqrdTo(int x2, int y2) {
+        return (x - x2) * (x - x2) + (y - y2) * (y - y2);
     }
 
     public String name() {return name;}
@@ -50,7 +55,7 @@ public final class MonitorData {
 
     public int y() {return y;}
 
-    public long id() {return id;}
+    public long id() {return id.getAsLong();}
 
     @Override
     public boolean equals(Object obj) {
@@ -73,10 +78,6 @@ public final class MonitorData {
                 "name=" + name + ", " +
                 "x=" + x + ", " +
                 "y=" + y + ']';
-    }
-
-    private Collection<Monitor> getMonitors() { ///mmmm juicy casting
-        return ((ScreenManagerAccessor) ((WindowAccessor) ((Object) Minecraft.getInstance().getWindow())).monitorial$getScreenManager()).monitorial$getMonitors().values();
     }
 
 }
