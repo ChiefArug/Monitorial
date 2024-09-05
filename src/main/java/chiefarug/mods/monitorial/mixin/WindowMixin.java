@@ -1,6 +1,7 @@
 package chiefarug.mods.monitorial.mixin;
 
-import chiefarug.mods.monitorial.early_startup.MonitorHelpers;
+import chiefarug.mods.monitorial.config.MonitorialConfigScreen;
+import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -9,6 +10,7 @@ import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.ScreenManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
+import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,7 +32,7 @@ public class WindowMixin {
             )
     )
     public Monitor monitorial$wrapGetWindow(ScreenManager instance, long monitorId, Operation<Monitor> original) {
-        return MonitorHelpers.getBestGLFWMonitorCode(() -> original.call(instance, monitorId), ((ScreenManagerAccessor) instance).getMonitors().values());
+        return Helpers.getBestGLFWMonitorCode(() -> original.call(instance, monitorId), ((ScreenManagerAccessor) instance).monitorial$getMonitors().values());
     }
 
     @Inject(
@@ -38,6 +40,24 @@ public class WindowMixin {
             at = @At("TAIL")
     )
     public void monitorial$attemptForceMoveIfEnabled(WindowEventHandler eventHandler, ScreenManager screenManager, DisplayData displayData, String preferredFullscreenVideoMode, String title, CallbackInfo ci, @Local Monitor monitor) {
-        MonitorHelpers.forceMoveToMonitor(monitor, window, windowedHeight, windowedWidth);
+        Helpers.forceMoveToMonitor(monitor, window, windowedHeight, windowedWidth);
+    }
+
+    @Inject(
+            method = "onResize",
+            at = @At("TAIL")
+    )
+    public void monitorial$onWindowResize(long window, int width, int height, CallbackInfo ci) {
+        if (Minecraft.getInstance().screen instanceof MonitorialConfigScreen configScreen)
+            configScreen.onResize(width, height);
+    }
+
+    @Inject(
+            method = "onMove",
+            at = @At("TAIL")
+    )
+    public void monitorial$onWindowMove(long window, int x, int y, CallbackInfo ci) {
+        if (Minecraft.getInstance().screen instanceof MonitorialConfigScreen configScreen)
+            configScreen.onMove(x, y);
     }
 }

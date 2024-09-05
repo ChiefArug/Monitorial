@@ -1,6 +1,5 @@
 package chiefarug.mods.monitorial.early_startup;
 
-import chiefarug.mods.monitorial.MonitorialShared;
 import chiefarug.mods.monitorial.config.MonitorData;
 import chiefarug.mods.monitorial.config.MonitorialStartupConfig;
 import chiefarug.mods.monitorial.mixin.ScreenManagerAccessor;
@@ -26,13 +25,13 @@ import static org.lwjgl.glfw.GLFW.GLFW_FEATURE_UNAVAILABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_NO_ERROR;
 import static org.lwjgl.glfw.GLFW.glfwGetError;
 
-public class MonitorHelpers {
+public class Helpers {
     public static final Logger LOGGER = LogUtils.getLogger();
 
 
     public static Monitor getBestGLFWMonitorCode(Supplier<Monitor> defaultPrimary, ObjectCollection<Monitor> monitors) {
         if (monitors.size() == 1) {
-            MonitorialShared.hasMultipleMonitors = false;
+            SharedConstants.hasMultipleMonitors = false;
             return defaultPrimary.get(); // silently return if there is only one monitor. we don't need to do anything.
         }
 
@@ -44,8 +43,9 @@ public class MonitorHelpers {
         Optional<MonitorData> configured = MonitorialStartupConfig.getInstance().defaultMonitor();
         if (configured.isEmpty()) {
             LOGGER.info("Monitorial is not configured, using default behaviour (primary monitor)");
-            LOGGER.info("To configured set one of these as \"defaultMonitor\" in config/monitorial-startup.json: ");
-            logMonitors();
+            LOGGER.info("To configure use the in game configuration screen, through the mods button! In case you want to configure manually, here are your monitors:");
+            for (Monitor monitor : monitors)
+                LOGGER.info("\t {\"name\": {}, \"x\": {}, \"y\": {}},", GLFW.glfwGetMonitorName(monitor.getMonitor()), monitor.getX(), monitor.getY());
             return defaultPrimary.get();
         }
         MonitorData preferred = configured.get();
@@ -61,7 +61,7 @@ public class MonitorHelpers {
                 y = monitor.getY();
             String name = GLFW.glfwGetMonitorName(monitor.getMonitor());
 
-            LOGGER.trace("Monitorial found a monitor named '{}' at x: {}, y: {}", name, x, y);
+//            LOGGER.info("Monitorial found a monitor named '{}' at x: {}, y: {}", name, x, y);
 
             NamedDistancedMonitor distanced = new NamedDistancedMonitor(getDistanceSqrd(preferred.x(), x, preferred.y(), y), monitor, name);
             distancedMonitors.add(distanced);
@@ -85,35 +85,18 @@ public class MonitorHelpers {
                 .orElseGet(defaultPrimary);
     }
 
-    private static int getDistanceSqrd(int x1, int x2, int y1, int y2) {
+    public static int getDistanceSqrd(int x1, int x2, int y1, int y2) {
         return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-    }
-
-    public static void logMonitors() {
-        PointerBuffer monitors = GLFW.glfwGetMonitors();
-        if (monitors == null) return;
-        int len = monitors.limit();
-        for (int i = 0; i < len; i++) {
-            long monitor = monitors.get();
-            int[] x = new int[1],
-                    y = new int[1];
-            String name = GLFW.glfwGetMonitorName(monitor);
-            GLFW.glfwGetMonitorPos(monitor, x, y);
-
-            LOGGER.info("""
-                    {"name": {}, "x": {}, "y": {}},"
-                    """, name, x[0], y[0]);
-        }
     }
 
     public static void forceMoveToMonitor(Monitor monitor, long window, int windowHeight, int windowWidth) {
         if (!MonitorialStartupConfig.getInstance().forceMove().shouldAttemptMove())  return;
 
         int x = monitor.getX() + windowWidth / 2; //TODO: fix this maths being slightly wrong compared to vanilla
-        int y = monitor.getY() + windowHeight / 2;
+        int y = monitor.getY() + windowHeight / 2; //TODO: make this use the config options
 
         String monitorName = GLFW.glfwGetMonitorName(monitor.getMonitor());
-        LOGGER.info("Attempting to force move window to position x: {}. y: {} on monitor {} (located at x: {}, y: {})", x, y, monitorName, monitor.getX(), monitor.getY());
+        LOGGER.info("Attempting to force move window to position {}, {} on monitor {} (located at x: {}, y: {})", x, y, monitorName, monitor.getX(), monitor.getY());
         GLFW.glfwSetWindowPos(window, x, y);
         try (MemoryStack memorystack = MemoryStack.stackPush()) {
             PointerBuffer pointerbuffer = memorystack.mallocPointer(1);
@@ -131,6 +114,14 @@ public class MonitorHelpers {
     }
 
     public static boolean hasMultipleMonitors(ScreenManager manager) {
-        return ((ScreenManagerAccessor) manager).getMonitors().size() > 1;
+        return ((ScreenManagerAccessor) manager).monitorial$getMonitors().size() > 1;
+    }
+
+    public static String getPrimaryMonitorName() {
+        return GLFW.glfwGetMonitorName(GLFW.glfwGetPrimaryMonitor());
+    }
+
+    public static String getCurrentMonitorName() {
+        return "TODO: imlpement"; // GLFW.glfwGetMonitorName(Minecraft.getInstance())
     }
 }

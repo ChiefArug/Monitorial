@@ -9,5 +9,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(ScreenManager.class)
 public interface ScreenManagerAccessor {
     @Accessor("monitors")
-    Long2ObjectMap<Monitor> getMonitors();
+    Long2ObjectMap<Monitor> monitorial$getMonitors();
 }

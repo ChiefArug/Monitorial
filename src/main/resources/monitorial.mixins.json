@@ -1,8 +1,10 @@
 {
   "package": "chiefarug.mods.monitorial.mixin",
   "client": [
-    "WindowMixin",
+    "UpdatableTooltip$AlsoCycleButtonAccessor",
+    "ScreenAccessor",
     "ScreenManagerAccessor",
-    "ScreenAccessor"
+    "WindowAccessor",
+    "WindowMixin"
   ]
 }
