@@ -2,6 +2,7 @@ package chiefarug.mods.monitorial.mixin;
 
 import chiefarug.mods.monitorial.config.MonitorialStartupConfig;
 import chiefarug.mods.monitorial.config.Position;
+import chiefarug.mods.monitorial.early_startup.ChosenMonitorHolder;
 import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
@@ -19,13 +20,13 @@ public class MinecraftMixin {
 
     @Inject(
             method = "<init>",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;setWindowActive(Z)V")
+            at = @At(value = "TAIL") // , target = "Lnet/minecraft/client/Minecraft;setWindowActive(Z)V"
     )
     public void monitorial$forceUpdateSizeAndPos$WindowsSucks(GameConfig gameConfig, CallbackInfo ci) {
         MonitorialStartupConfig config = MonitorialStartupConfig.getInstance();
         if (!config.forceMove().shouldAttemptMove()) return;
         Position position = config.position();
-        Helpers.forceUpdatePos(Helpers.getCurrentMonitor(window), window.getWindow(), position.x(), position.y());
+        Helpers.forceUpdatePos(((ChosenMonitorHolder) ((Object) window)).monitorial$getChosenMonitor(), window.getWindow(), position.x(), position.y());
         Position size = config.windowSize();
         Helpers.forceUpdateSize(window.getWindow(), size.x(), size.y());
     }

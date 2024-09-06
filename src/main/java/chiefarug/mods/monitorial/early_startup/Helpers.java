@@ -113,7 +113,7 @@ public class Helpers {
         try (MemoryStack memorystack = MemoryStack.stackPush()) {
             PointerBuffer pointerbuffer = memorystack.mallocPointer(1);
             int error = glfwGetError(pointerbuffer);
-            switch (error) {
+            switch (error) { //TODO:  this isnt catching errors... do we really need to set the error callback??
                 case GLFW_NO_ERROR -> {
                     LOGGER.info("Monitorial successfully moved the game window to monitor '{}'!", monitorName);
                     return true;

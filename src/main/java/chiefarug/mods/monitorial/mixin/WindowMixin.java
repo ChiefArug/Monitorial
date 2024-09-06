@@ -3,11 +3,11 @@ package chiefarug.mods.monitorial.mixin;
 import chiefarug.mods.monitorial.config.MonitorialConfigScreen;
 import chiefarug.mods.monitorial.config.MonitorialStartupConfig;
 import chiefarug.mods.monitorial.config.Position;
+import chiefarug.mods.monitorial.early_startup.ChosenMonitorHolder;
 import chiefarug.mods.monitorial.early_startup.Helpers;
 import chiefarug.mods.monitorial.early_startup.SharedData;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.DisplayData;
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.ScreenManager;
@@ -18,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -25,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Optional;
 
 @Mixin(Window.class)
-public class WindowMixin {
+public class WindowMixin implements ChosenMonitorHolder {
     @Shadow @Final private long window;
     @Shadow private int windowedHeight;
     @Shadow private int windowedWidth;
@@ -36,17 +37,17 @@ public class WindowMixin {
 
     @Shadow private boolean fullscreen;
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    @Shadow private Optional<VideoMode> preferredFullscreenVideoMode;
 
-    @Inject(
-            method = "<init>",
-            at = @At(value = "INVOKE", target = "Ljava/lang/Object;<init>()V", shift = At.Shift.AFTER)
-    )
-    public void monitorial$captureInitialDisplayData(WindowEventHandler eventHandler, ScreenManager screenManager, DisplayData displayData, String preferredFullscreenVideoMode, String title, CallbackInfo ci) {
+    @Unique // this is used to reposition later on at the end of Minecraft.<init>
+    private Monitor monitorial$chosenMonitor;
 
+    @Unique
+    public Monitor monitorial$getChosenMonitor() {
+        return monitorial$chosenMonitor;
     }
 
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    @Shadow private Optional<VideoMode> preferredFullscreenVideoMode;
 
     @WrapOperation(
             method = "<init>",
@@ -61,7 +62,9 @@ public class WindowMixin {
         Monitor m = original.call(instance ,monitorID);
         VideoMode mode = m.getPreferredVidMode(this.fullscreen ? this.preferredFullscreenVideoMode : Optional.empty());
         SharedData.orignialPosition = new Position(m.getX() + mode.getWidth() / 2 - this.width / 2, m.getY() + mode.getHeight() / 2 - this.height / 2);
-        return Helpers.getBestGLFWMonitorCode(() -> m, ((ScreenManagerAccessor) instance).monitorial$getMonitors().values());
+        Monitor monitor = Helpers.getBestGLFWMonitorCode(() -> m, ((ScreenManagerAccessor) instance).monitorial$getMonitors().values());
+        monitorial$chosenMonitor = monitor;
+        return monitor;
     }
 
     @Inject(
