@@ -179,8 +179,8 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
             return;
         }
         Position monitorSize = Helpers.getMonitorSize(monitor);
-        xPos.setRange(0, monitorSize.x());
-        yPos.setRange(0, monitorSize.y());
+        xPos.setRange(-1, monitorSize.x());
+        yPos.setRange(-1, monitorSize.y());
         xSize.setRange(0, monitorSize.x());
         ySize.setRange(0, monitorSize.y());
 //        if (!automaticMode.getValue()) return;
