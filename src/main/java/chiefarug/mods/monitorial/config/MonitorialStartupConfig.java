@@ -69,7 +69,7 @@ public final class MonitorialStartupConfig {
 
     // default constructor, for use when the config was not found or failed to load.
     private MonitorialStartupConfig(boolean isGlobal) {
-        this(true, true, Optional.empty(), ForceMoveState.ALWAYS, new Position(0, 0), new Position(-1, -1));
+        this(true, true, Optional.empty(), ForceMoveState.ALWAYS, new Position(-1, -1), new Position(-1, -1));
         this.save(isGlobal);
     }
 

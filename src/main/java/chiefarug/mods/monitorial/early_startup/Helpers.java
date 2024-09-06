@@ -94,8 +94,18 @@ public class Helpers {
      * @return If the move operation succeeded.
      */
     public static boolean forceUpdatePos(Monitor monitor, long window, int relativeX, int relativeY) {
-        int x = monitor.getX() + relativeX;
-        int y = monitor.getY() + relativeY;
+        if (relativeX <= -1 && relativeY <= -1) return true;
+        int x, y;
+        if (relativeX <= 0 || relativeY <= 0) {
+            int[] xC = new int[1],
+                    hC = new int[1];
+            GLFW.glfwGetWindowPos(window, xC, hC);
+            x = xC[0];
+            y = hC[0];
+        } else {
+            x = monitor.getX() + relativeX;
+            y = monitor.getY() + relativeY;
+        }
 
         String monitorName = GLFW.glfwGetMonitorName(monitor.getMonitor());
         LOGGER.info("Attempting to force move window to relative position {}, {} on monitor {} (located at x: {}, y: {})", x, y, monitorName, monitor.getX(), monitor.getY());
@@ -123,7 +133,7 @@ public class Helpers {
      * @return If the resize operation succeeded. If both the new width and new height are invalid will noop and return true.
      */
     public static boolean forceUpdateSize(long window, int newWidth, int newHeight) {
-        if (newWidth == -1 && newHeight == -1) return true;
+        if (newWidth <= 0 && newHeight <= 0) return true;
         int w, h;
         if (newWidth <= 0 || newHeight <= 0) {
             int[] wC = new int[1],
