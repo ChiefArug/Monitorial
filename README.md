@@ -12,7 +12,6 @@ If you do want more information about how the configuration works read on:
   By default, Monitorial uses a global configuration file, which is saved in your .minecraft directory and will apply to all instances that have Monitorial installed. If you do not wish to have this shared between instances then you can either set the global config to use local configuration, which will cause all instances to use their local configuration, or you can just set the current local configuration to use the local configuration (which will also prevent Monitorial from attempting to load the global config file at all for that instance, if that is causing issues). If you wish to know exactly where a config is stored check the tooltip of the Currently Editing button in the configuration
 ### automaticMode
   By default Monitorial runs in Automatic mode, and will remember the last window position and restore the game window to there on next launch. This can be disabled which allows for manual configuration of the monitor, size and position.
-  this.defaultMonitor = defaultMonitor;
 ### defaultMonitor
   The monitor that the Minecraft window should appear on. If this is not present then the primary monitor is used. In the configuration file this stores both the monitors name and position, as multiple monitors can have the same name. The position is also used as a fallback if no monitor with that name is found.
 ### forceMove
