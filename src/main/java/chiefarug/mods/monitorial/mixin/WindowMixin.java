@@ -66,19 +66,6 @@ public class WindowMixin {
 
     @Inject(
             method = "<init>",
-            at = @At("TAIL")
-    )
-    public void monitorial$attemptForceMove(WindowEventHandler eventHandler, ScreenManager screenManager, DisplayData displayData, String preferredFullscreenVideoMode, String title, CallbackInfo ci, @Local Monitor monitor) {
-        MonitorialStartupConfig config = MonitorialStartupConfig.getInstance();
-        if (!config.forceMove().shouldAttemptMove()) return;
-        Position position = config.position();
-        Helpers.forceUpdatePos(monitor, window, position.x(), position.y());
-        Position size = config.windowSize();
-        Helpers.forceUpdateSize(window, size.x(), size.y());
-    }
-
-    @Inject(
-            method = "<init>",
             at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwDefaultWindowHints()V")
     )
     public void monitorial$setSize(WindowEventHandler eventHandler, ScreenManager screenManager, DisplayData displayData, String preferredFullscreenVideoMode, String title, CallbackInfo ci) {
