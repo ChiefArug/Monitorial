@@ -239,6 +239,7 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
         this.addUpdatableOptions();
 
         updateNotActiveWarningText(editingGlobal, () -> MonitorialStartupConfig.GLOBAL.get().useGlobalConfig(), MonitorialStartupConfig.LOCAL.useGlobalConfig());
+        this.updateAutomaticMode(automaticMode, automaticMode.getValue());
     }
 
     private void updateUseGlobalConfig(CycleButton<?> _b, boolean useGlobal) {
