@@ -15,7 +15,6 @@ import com.mojang.blaze3d.platform.VideoMode;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
 import net.minecraft.client.Minecraft;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -27,7 +26,6 @@ import java.util.Optional;
 
 @Mixin(Window.class)
 public class WindowMixin implements ChosenMonitorHolder {
-    @Shadow @Final private long window;
     @Shadow private int windowedHeight;
     @Shadow private int windowedWidth;
 
@@ -100,7 +98,7 @@ public class WindowMixin implements ChosenMonitorHolder {
 
     @Inject(
             method = "close",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;assertOnRenderThread()V")
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;assertOnRenderThread()V", shift = At.Shift.AFTER)
     )
     public void monitorial$onWindowClose(CallbackInfo ci) {
         MonitorialStartupConfig.getInstance().onWindowClose(((Window) ((Object) this)));

@@ -41,7 +41,7 @@ public class Helpers {
         }
 
         if (FMLConfig.getBoolConfigValue(FMLConfig.ConfigValue.EARLY_WINDOW_CONTROL) && MonitorialStartupConfig.getInstance().forceMove() == NEVER) {
-            LOGGER.warn("earlyWindowControl in config/fml.toml is enabled and forceMove in config/monitorial-startup.json is set to NEVER so Monitorial has been effectively disabled!");
+            LOGGER.warn("earlyWindowControl in config/fml.toml is enabled and forceMove in Monitorial's config is set to NEVER so Monitorial has been effectively disabled!");
             return defaultPrimary.get(); // in theory running the code after this is fine, but the logging messages will be confusing
         }
 
@@ -94,17 +94,18 @@ public class Helpers {
      * @return If the move operation succeeded.
      */
     public static boolean forceUpdatePos(Monitor monitor, long window, int relativeX, int relativeY) {
-        if (relativeX <= -1 && relativeY <= -1) return true;
-        int x, y;
-        if (relativeX <= 0 || relativeY <= 0) {
+        if (relativeX <= -1 && relativeY <= -1 && getCurrentMonitor().equals(monitor)) return true; // we can only cancel early if we are set to not move AND are on the correct monitor
+        int x = monitor.getX();
+        int y = monitor.getY();
+        if (relativeX <= -1 || relativeY <= -1) {
             int[] xC = new int[1],
                     hC = new int[1];
             GLFW.glfwGetWindowPos(window, xC, hC);
-            x = xC[0];
-            y = hC[0];
+            x += xC[0];
+            y += hC[0];
         } else {
-            x = monitor.getX() + relativeX;
-            y = monitor.getY() + relativeY;
+            x += relativeX;
+            y += relativeY;
         }
 
         String monitorName = GLFW.glfwGetMonitorName(monitor.getMonitor());

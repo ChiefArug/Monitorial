@@ -27,9 +27,10 @@ final class CustomSlider extends ExtendedSlider implements UpdatableTooltip$Also
 
     @SuppressWarnings("SameParameterValue")
     void setRange(double min, double max) {
-        this.minValue = min;
-        this.maxValue = max;
-        this.setValue(this.value); // Math.min(max, Math.max(value, min));
+//        double oldValue = this.value;
+        this.minValue = min; // we dont actually handle the value here as it is stored in percent form, which is a good way to keep it
+        this.maxValue = max;// (so if it was half your screen size on a 1080p monitor, after clicking the button it will be half the screensize on the 4k monitor)
+//        this.value =; // this will handle clamping to the new range for us
     }
 
     @NotNull

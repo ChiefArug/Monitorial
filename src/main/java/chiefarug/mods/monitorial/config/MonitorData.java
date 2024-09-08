@@ -4,9 +4,14 @@ import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.LongSupplier;
@@ -18,12 +23,37 @@ public final class MonitorData {
                     Codec.INT.fieldOf("x").forGetter(MonitorData::x),
                     Codec.INT.fieldOf("y").forGetter(MonitorData::y)
             ).apply(instance, MonitorData::new));
+
+    public static Map<MonitorData, String> DISPLAY_NAMES = new HashMap<>();
+
+    public static List<Optional<MonitorData>> getMonitors() {
+        DISPLAY_NAMES.clear();
+        ArrayList<Optional<MonitorData>> optionals = new ArrayList<>(List.of(Optional.empty()));
+        // this is sorted so that numbered names apply properly.
+        // sort by y first then x, so it goes from top left to top right to bottom left to bottom right
+        Map<String, Integer> names = new HashMap<>();
+        Helpers.getMonitors().values().stream().sorted(Comparator.comparingInt(Monitor::getY).thenComparingInt(Monitor::getX)).forEach(monitor -> {
+            String orignalName = GLFW.glfwGetMonitorName(monitor.getMonitor());
+            orignalName = orignalName == null ? "Unknown" : orignalName;
+            String displayName = orignalName;
+            int number = names.compute(orignalName, (k, v) -> v == null ? 1 : ++v);
+            if (number > 1)
+                displayName = String.format("%s (%s)", orignalName, number);
+
+            MonitorData data = new MonitorData(orignalName, monitor.getX(), monitor.getY(), monitor.getMonitor());
+            DISPLAY_NAMES.put(data, displayName);
+            optionals.add(Optional.of(data));
+        });
+        return optionals;
+    }
+
+    // transient fields are ignored for equality checks
     private final String name;
     private final int x;
     private final int y;
-    private final LongSupplier id;
+    private final transient LongSupplier id;
 
-    public MonitorData(String name, int x, int y) {
+    private MonitorData(String name, int x, int y) {
         this.name = name;
         this.x = x;
         this.y = y;
@@ -34,15 +64,16 @@ public final class MonitorData {
                 .orElse(0L);
     }
 
-    public MonitorData(String name, int x, int y, long id) {
+    MonitorData(String name, int x, int y, long id) {
         this.name = name;
         this.x = x;
         this.y = y;
         this.id = () -> id;
     }
 
-    public static Optional<MonitorData> from(Monitor mon) {
-        return Optional.of(new MonitorData(GLFW.glfwGetMonitorName(mon.getMonitor()), mon.getX(), mon.getY(), mon.getMonitor()));
+    public static MonitorData from(Monitor mon) {
+        String name = GLFW.glfwGetMonitorName(mon.getMonitor());
+        return new MonitorData(name, mon.getX(), mon.getY(), mon.getMonitor());
     }
 
     public int getDistanceSqrdTo(int x2, int y2) {
@@ -57,11 +88,16 @@ public final class MonitorData {
 
     public long id() {return id.getAsLong();}
 
+    public String displayName() {return DISPLAY_NAMES.get(this);}
+
+    public Component toComponent() {
+        return Component.literal(displayName());
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (MonitorData) obj;
+        if (!(obj instanceof MonitorData that)) return false;
         return Objects.equals(this.name, that.name) &&
                 this.x == that.x &&
                 this.y == that.y;
@@ -79,5 +115,4 @@ public final class MonitorData {
                 "x=" + x + ", " +
                 "y=" + y + ']';
     }
-
 }

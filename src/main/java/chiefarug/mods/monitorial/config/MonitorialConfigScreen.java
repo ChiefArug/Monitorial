@@ -22,16 +22,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModContainer;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import static chiefarug.mods.monitorial.Monitorial.MODRL;
+import static chiefarug.mods.monitorial.config.MonitorData.getMonitors;
 import static chiefarug.mods.monitorial.config.MonitorialStartupConfig.*;
 
 @SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "LoggingSimilarMessage"})
@@ -51,6 +49,15 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
     private CustomSlider xSize;
     private CustomSlider ySize;
     private StringWidget configNotActiveText;
+    private final MonitorData primary;
+    {
+        long id = GLFW.glfwGetPrimaryMonitor();
+        String name = GLFW.glfwGetMonitorName(id);
+        int[] x = new int[1];
+        int[] y = new int[1];
+        GLFW.glfwGetMonitorPos(id, x, y);
+        primary = new MonitorData(name, x[0], y[0], id);
+    }
 
     private CycleButton<Boolean> currentlyEditing;
 
@@ -62,18 +69,15 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
     }
 
     @SuppressWarnings("OptionalIsPresent")
-    private static Component getMonitorString(Optional<MonitorData> monitor) {
+    private Component getMonitorString(Optional<MonitorData> monitor) {
         return monitor.isEmpty() ?
-                Component.translatable("options.monitorial.monitor_data.primary", GLFW.glfwGetMonitorName(GLFW.glfwGetPrimaryMonitor())) :
-                Component.literal(monitor.get().name());
+                Component.translatable("options.monitorial.monitor_data.primary", MonitorData.DISPLAY_NAMES.get(primary)) :
+                monitor.get().toComponent();
     }
 
 
-    private static final Collector<Optional<MonitorData>, ?, ArrayList<Optional<MonitorData>>> monitorCollector = Collectors.toCollection(() -> new ArrayList<>(List.of(Optional.empty())));
     private static List<Optional<MonitorData>> getMonitorData() {
-        return Helpers.getMonitors().values().stream()
-                        .map(MonitorData::from)
-                        .collect(monitorCollector);
+        return getMonitors();
     }
 
     @Override
@@ -110,9 +114,9 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
         int sliderMaxY = monitorSize.y();
         this.list.addSmall(manualWidgets = List.of(
                 defaultMonitor = this.createButton("default_monitor", //NOTE: the list of values for this button needs to be recreated each time the screen opened in case a monitor got added/removed
-                        MonitorialConfigScreen::getMonitorString,
+                        this::getMonitorString,
                         getMonitorData(),
-                        config.defaultMonitor(),
+                        config.defaultMonitor(), // use the one in the list, so that the display name is set
                         this::updateDefaultMonitor
                 ),
                 this.createButton("force_move",
@@ -121,9 +125,9 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
                         config.forceMove(),
                         this::updateForceMove, true
                 ), // the values and ranges for these will be set at the end in updateSliders()
-                xPos = new CustomSlider(Component.translatable("options.monitorial.x_pos").append(COLON), 0, sliderMaxX, config.position().x(),
+                xPos = new CustomSlider(Component.translatable("options.monitorial.x_pos").append(COLON), -1, sliderMaxX, config.position().x(),
                         this::updateXPos, Tooltip.create(Component.translatable("options.monitorial.x_pos.tooltip"))),
-                yPos = new CustomSlider(Component.translatable("options.monitorial.y_pos").append(COLON), 0, sliderMaxY, config.position().y(),
+                yPos = new CustomSlider(Component.translatable("options.monitorial.y_pos").append(COLON), -1, sliderMaxY, config.position().y(),
                         this::updateYPos, Tooltip.create(Component.translatable("options.monitorial.y_pos.tooltip"))),
                 xSize = new CustomSlider(Component.translatable("options.monitorial.x_size").append(COLON), 0, sliderMaxX, config.windowSize().x(),
                         this::updateWidth, Tooltip.create(Component.translatable("options.monitorial.x_size.tooltip"))),
@@ -356,7 +360,7 @@ public class MonitorialConfigScreen extends OptionsSubScreen {
     }
 
     private void setDefaultMonitor(Monitor monitor) {
-        Optional<MonitorData> monitorData = MonitorData.from(monitor);
+        Optional<MonitorData> monitorData = Optional.of(MonitorData.from(monitor));
         defaultMonitor.setValue(monitorData);
         updateDefaultMonitor(defaultMonitor, monitorData);
     }

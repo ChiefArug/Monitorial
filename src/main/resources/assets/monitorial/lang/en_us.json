@@ -11,7 +11,7 @@
   "options.monitorial.disabled_automatic": "Automatic mode is on",
   "options.monitorial.currently_editing.tooltip": "File location: %s",
   "options.monitorial.monitor_data.primary": "Primary (%s)",
-  "options.monitorial.default_monitor.tooltip": "The monitor that the game window will be on",
+  "options.monitorial.default_monitor.tooltip": "The monitor that the game window will be on. Monitors with the same name are numbered going from left to right then top to bottom",
   "options.monitorial.default_monitor": "Monitor",
   "options.monitorial.force_move": "Force Move",
   "options.monitorial.force_move.tooltip": "Attempt to force move and resize the window after it has opened. This is required to have custom positions apply. ELS Only will only try if NeoForge's Early Loading Screen is enabled",

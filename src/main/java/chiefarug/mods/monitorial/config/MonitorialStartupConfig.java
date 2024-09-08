@@ -1,11 +1,11 @@
 package chiefarug.mods.monitorial.config;
 
-import chiefarug.mods.monitorial.early_startup.Helpers;
 import com.google.common.base.Suppliers;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonWriter;
+import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
@@ -23,10 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static chiefarug.mods.monitorial.early_startup.Helpers.getCurrentMonitor;
 import static chiefarug.mods.monitorial.early_startup.SharedData.MODID;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -165,36 +165,24 @@ public final class MonitorialStartupConfig {
     void windowSize(Position newValue) {windowSize = newValue;}
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (MonitorialStartupConfig) obj;
-        return this.useGlobalConfig == that.useGlobalConfig &&
-                Objects.equals(this.defaultMonitor, that.defaultMonitor) &&
-                Objects.equals(this.position, that.position) &&
-                Objects.equals(this.windowSize, that.windowSize) &&
-                Objects.equals(this.forceMove, that.forceMove);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(useGlobalConfig, defaultMonitor, position, windowSize, forceMove);
-    }
-
-    @Override
     public String toString() {
         return "MonitorialStartupConfig[" +
                 "useGlobalConfig=" + useGlobalConfig + ", " +
                 "defaultMonitor=" + defaultMonitor + ", " +
+                "automaticMode=" + automaticMode + ", " +
                 "position=" + position + ", " +
                 "windowSize=" + windowSize + ", " +
                 "forceMove=" + forceMove + ']';
     }
 
     public void onWindowClose(Window window) {
-        defaultMonitor(MonitorData.from(Helpers.getCurrentMonitor(window)));
+        if (!automaticMode()) return;
+        defaultMonitor(Optional.of(MonitorData.from(getCurrentMonitor(window))));
         windowSize(new Position(window.getWidth(), window.getHeight()));
-        position(new Position(window.getX(), window.getY()));
+        Monitor currentMonitor = getCurrentMonitor(window);
+        LGGR.info("x {}, y {}", window.getX(), window.getY());
+        LGGR.info("alt x {}, y {}", window.getX() - currentMonitor.getX(), window.getY() - currentMonitor.getY());
+        position(new Position(window.getX() - currentMonitor.getX(), window.getY() - currentMonitor.getY()));
         save(isGlobal());
     }
 }
